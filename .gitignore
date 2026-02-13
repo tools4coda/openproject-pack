@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.coda.json
+.coda-credentials.json
+.coda-pack.json
+.secrets/
+.env
+.env.local
+*.log
+.DS_Store
