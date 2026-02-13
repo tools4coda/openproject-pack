@@ -1,1 +1,2 @@
-export { getProject } from './get-project';
+export { GetProject } from './get-project';
+export { GetWorkPackage } from './get-work-package';

@@ -1,7 +1,7 @@
 import * as coda from '@codahq/packs-sdk';
 import { ProjectSchema } from '../types';
 
-export const getProject = coda.makeFormula({
+export const GetProject = coda.makeFormula({
   resultType: coda.ValueType.Object,
   name: 'GetProject',
   description: 'Get a project by ID',

@@ -1,2 +1,2 @@
-export { projectsSyncTable } from './projects';
-export { workPackagesSyncTable } from './work-packages';
+export { syncProjects, ProjectsSchema } from './projects';
+export { syncWorkPackages, WorkPackageSchema } from './work-packages';

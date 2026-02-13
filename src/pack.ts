@@ -2,40 +2,62 @@ import * as coda from "@codahq/packs-sdk";
 
 export const pack = coda.newPack();
 
-// OpenProject uses API Key via Basic Auth
+// ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+// OpenProject uses API Key via Basic Auth (WebBasic)
 // Username: apikey
-// Password: <your API key>
+// Password: <your API key from OpenProject account page>
 pack.setUserAuthentication({
   type: coda.AuthenticationType.WebBasic,
-  instructions: "Enter your OpenProject API key. Get it from your account page in OpenProject.",
+  instructions: "Enter your OpenProject API key as password. Get it from your account page in OpenProject (username is always 'apikey').",
+  requiresDomainUrl: true,  // For self-hosted instances
 });
 
-// Network domain must be set for self-hosted instances
-// Users will configure their instance URL via the connection
-pack.addNetworkDomain("*");
+// ============================================================================
+// SYNC TABLES
+// ============================================================================
 
-// Core schemas and types
-import {
-  Project, ProjectSchema,
-  WorkPackage, WorkPackageSchema,
-  User, UserSchema,
-  TimeEntry, TimeEntrySchema,
-} from "./types";
+import * as syncTables from './sync-tables';
 
-// Export types for use in other modules
-export { Project, WorkPackage, User, TimeEntry };
+// Projects sync table
+pack.addSyncTable({
+  name: 'Projects',
+  description: 'Sync all accessible projects',
+  schema: syncTables.ProjectsSchema,
+  formula: syncTables.syncProjects,
+});
 
-// TODO: Import and register sync tables
-// import * as syncTables from './sync-tables';
-// pack.addSyncTable(syncTables.projectsSyncTable);
-// pack.addSyncTable(syncTables.workPackagesSyncTable);
+// Work Packages sync table  
+pack.addSyncTable({
+  name: 'Work Packages',
+  description: 'Sync work packages from projects',
+  schema: syncTables.WorkPackageSchema,
+  formula: syncTables.syncWorkPackages,
+});
 
-// TODO: Import and register formulas
-// import * as formulas from './formulas';
-// pack.addFormula(formulas.getProject);
-// pack.addFormula(formulas.getWorkPackage);
+// ============================================================================
+// FORMULAS
+// ============================================================================
 
-// TODO: Import and register actions
-// import * as actions from './actions';
-// pack.addFormula(actions.createWorkPackage);
-// pack.addFormula(actions.updateWorkPackage);
+import * as formulas from './formulas';
+
+pack.addFormula(formulas.GetProject);
+pack.addFormula(formulas.GetWorkPackage);
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
+
+import * as actions from './actions';
+
+pack.addFormula(actions.CreateWorkPackage);
+pack.addFormula(actions.UpdateWorkPackage);
+pack.addFormula(actions.CreateTimeEntry);
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export { Project, WorkPackage, User, TimeEntry } from './types';
