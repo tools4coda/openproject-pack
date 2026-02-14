@@ -1,52 +1,73 @@
-# OpenProject Pack - Coda Deployment Complete! ✅
+# OpenProject Pack for Coda
 
-## Pack URL
-https://coda.io/p/48268
+[![Tests](https://github.com/tools4coda/openproject-pack/actions/workflows/test.yml/badge.svg)](https://github.com/tools4coda/openproject-pack/actions/workflows/test.yml)
 
-## Deployment Status
-- ✅ Created in Coda (Pack ID: 48268)
-- ✅ Version 1 uploaded
-- ✅ GitHub: https://github.com/tools4coda/openproject-pack
+Coda Pack for [OpenProject](https://www.openproject.org/) - the leading open source project management software.
 
 ## Features
 
-### Sync Tables
-- **Projects** - All accessible projects
-- **WorkPackages** - Work packages with optional project filter
+### Sync Tables (8)
 
-### Formulas
-- **GetProject(id)** - Get single project
-- **GetWorkPackage(id)** - Get single work package
+| Table | Description | Primary Fields |
+|-------|-------------|----------------|
+| **Projects** | Project list with hierarchy | id, name, identifier, status, parentId |
+| **WorkPackages** | Tasks, features, bugs | id, subject, status, priority, assignee, % done |
+| **Users** | Team members | id, name, email, login, admin flag |
+| **TimeEntries** | Time tracking records | id, hours, spentOn, workPackage, comment |
+| **Versions** | Milestones/releases | id, name, status, start/end dates |
+| **Statuses** | Work package statuses | id, name, color, isClosed |
+| **Priorities** | Work package priorities | id, name, position |
+| **Queries** | Saved filters/views | id, name, public, starred |
 
-### Actions
-- **CreateWorkPackage(projectId, subject, description)** - Create new work item
+### Formulas (5)
+
+| Formula | Description | Parameters |
+|---------|-------------|------------|
+| `Project(id)` | Get project by ID | id: number |
+| `WorkPackage(id)` | Get work package by ID | id: number |
+| `User(id)` | Get user by ID | id: number |
+| `TimeEntry(id)` | Get time entry by ID | id: number |
+| `Version(id)` | Get version by ID | id: number |
+
+### Actions (10)
+
+| Action | Description |
+|--------|-------------|
+| **CreateProject** | Create a new project |
+| **UpdateProject** | Update project name, description, status |
+| **CreateWorkPackage** | Create a new task/feature/bug |
+| **UpdateWorkPackage** | Update subject, status, assignee, progress |
+| **DeleteWorkPackage** | Delete a work package |
+| **AddComment** | Add a comment to a work package |
+| **CreateTimeEntry** | Log time spent on a work package |
+| **UpdateTimeEntry** | Update logged time |
+| **AssignWorkPackage** | Quickly assign/reassign a work package |
+| **UpdateProgress** | Update work package progress percentage |
 
 ## Authentication
 
-1. In Coda, add the pack
-2. Enter your OpenProject URL
-3. Username: `apikey`
-4. Password: Your OpenProject API key
+1. Get your API key from OpenProject (Account → Profile → Access tokens)
+2. Use Bearer Token authentication
+3. Configure your instance URL (e.g., `mycompany.openproject.com`)
 
-## API Key Location in OpenProject
-- Go to your profile → Account settings → API access → Generate key
+## Installation
 
-## Configuration for Self-hosted
-Works with any OpenProject instance - just enter your URL during authentication.
+1. Install the Pack from Coda Gallery (coming soon)
+2. Or use CLI: `npx coda create src/pack.ts`
 
-## Build
+## Development
+
 ```bash
 npm install
-npm run build  # ✅ TypeScript compiles successfully
+npm run build
+npm test
+npm run upload
 ```
 
-## Files
-- `src/pack.ts` - Main pack definition
-- `.coda.json` - API credentials (local only, not committed)
+## API Coverage
 
-## TODO
-- [ ] Add more sync tables (TimeEntries, Users, Statuses, etc.)
-- [ ] Add more actions (UpdateWorkPackage, CreateTimeEntry)
-- [ ] Add autocomplete for project/assignee selection
-- [ ] Handle pagination for large datasets
-- [ ] Add formula for custom queries
+Uses [OpenProject API v3](https://www.openproject.org/docs/api/v3/) with HAL+JSON format.
+
+## License
+
+MIT
