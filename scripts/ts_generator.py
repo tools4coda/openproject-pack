@@ -16,22 +16,51 @@ def parse_spec(spec_path):
             return yaml.safe_load(f)
         return json.load(f)
 
-def openapi_type_to_ts(openapi_type, format=None, ref=None):
-    """Convert OpenAPI types to TypeScript types"""
-    if ref:
-        # Extract type name from #/components/schemas/Name
+def openapi_type_to_ts(prop_def):
+    """Convert OpenAPI property definition to TypeScript type"""
+    if not isinstance(prop_def, dict):
+        return 'any'
+    
+    # Handle ref
+    if '$ref' in prop_def:
+        ref = prop_def['$ref']
         return ref.split('/')[-1]
     
+    # Handle anyOf/oneOf
+    if 'anyOf' in prop_def or 'oneOf' in prop_def:
+        return 'any'
+    
+    # Handle allOf (composition)
+    if 'allOf' in prop_def:
+        return 'any'
+    
+    openapi_type = prop_def.get('type', 'any')
+    format_type = prop_def.get('format')
+    
+    # Handle array with items
+    if openapi_type == 'array':
+        items = prop_def.get('items', {})
+        if '$ref' in items:
+            item_type = items['$ref'].split('/')[-1]
+        else:
+            item_type = openapi_type_to_ts(items)
+        return f"{item_type}[]"
+    
+    # Handle object with additionalProperties
+    if openapi_type == 'object':
+        if 'additionalProperties' in prop_def:
+            return 'Record<string, any>'
+        return 'Record<string, any>'
+    
+    # Type mapping
     type_map = {
         'string': 'string',
         'integer': 'number',
         'number': 'number',
         'boolean': 'boolean',
-        'array': 'any[]',
-        'object': 'Record<string, any>'
     }
     
-    if format == 'date-time':
+    if format_type == 'date-time':
         return 'string'  # ISO date string
     
     return type_map.get(openapi_type, 'any')
@@ -40,6 +69,11 @@ def generate_interface(name, schema, spec):
     """Generate TypeScript interface from schema"""
     lines = [f"export interface {name} {{"]
     
+    if not isinstance(schema, dict):
+        lines.append("  [key: string]: any;")
+        lines.append("}")
+        return '\n'.join(lines)
+    
     properties = schema.get('properties', {})
     required = schema.get('required', [])
     
@@ -47,29 +81,15 @@ def generate_interface(name, schema, spec):
         is_optional = prop_name not in required
         optional_marker = '?' if is_optional else ''
         
-        # Handle ref
-        if '$ref' in prop_def:
-            ts_type = openapi_type_to_ts(ref=prop_def['$ref'])
-        # Handle array with items
-        elif prop_def.get('type') == 'array' and 'items' in prop_def:
-            if '$ref' in prop_def['items']:
-                item_type = openapi_type_to_ts(ref=prop_def['items']['$ref'])
-            else:
-                item_type = openapi_type_to_ts(prop_def['items'].get('type'))
-            ts_type = f"{item_type}[]"
-        # Handle object with additionalProperties
-        elif prop_def.get('type') == 'object' and 'additionalProperties' in prop_def:
-            ts_type = 'Record<string, any>'
-        # Handle anyOf/oneOf
-        elif 'anyOf' in prop_def or 'oneOf' in prop_def:
+        try:
+            ts_type = openapi_type_to_ts(prop_def)
+        except Exception as e:
             ts_type = 'any'
-        else:
-            ts_type = openapi_type_to_ts(
-                prop_def.get('type'),
-                prop_def.get('format')
-            )
         
-        description = prop_def.get('description', '')
+        description = ''
+        if isinstance(prop_def, dict):
+            description = prop_def.get('description', '')
+        
         if description:
             lines.append(f"  /** {description[:80]} */")
         lines.append(f"  {prop_name}{optional_marker}: {ts_type};")
@@ -92,13 +112,14 @@ def generate_types(spec_path, output_path):
     ]
     
     # Generate interfaces for all schemas
+    count = 0
     for name, schema in sorted(schemas.items()):
-        if schema.get('type') == 'object' or 'properties' in schema:
-            try:
-                interface = generate_interface(name, schema, spec)
-                lines.append(interface)
-            except Exception as e:
-                print(f"Warning: Could not generate interface for {name}: {e}")
+        try:
+            interface = generate_interface(name, schema, spec)
+            lines.append(interface)
+            count += 1
+        except Exception as e:
+            print(f"Warning: Could not generate interface for {name}: {e}")
     
     content = '\n'.join(lines)
     
@@ -106,7 +127,7 @@ def generate_types(spec_path, output_path):
         f.write(content)
     
     print(f"Generated types: {output_path}")
-    print(f"  - {len(schemas)} interfaces generated")
+    print(f"  - {count} interfaces generated")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

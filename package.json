@@ -1,24 +1,30 @@
 {
   "name": "openproject-pack",
   "version": "1.0.0",
-  "description": "Complete OpenProject API integration for Coda - supports self-hosted instances with API Key authentication",
+  "description": "Coda Pack for OpenProject - Project management integration",
   "main": "dist/pack.js",
   "scripts": {
     "build": "tsc",
-    "test": "mocha -r ts-node/register test/**/*.ts"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "tsc --noEmit",
+    "upload": "npx coda upload src/pack.ts",
+    "create": "npx coda create src/pack.ts --name 'OpenProject' --description 'Project management with OpenProject'"
   },
+  "keywords": ["coda", "pack", "openproject", "project-management"],
+  "author": "tfm-tf",
+  "license": "MIT",
   "dependencies": {
     "@codahq/packs-sdk": "^1.7.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.0",
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^18.0.0",
-    "@types/sinon": "^10.0.0",
-    "chai": "^4.3.0",
-    "mocha": "^10.0.0",
-    "sinon": "^15.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "sinon": "^17.0.0",
+    "@types/sinon": "^17.0.0"
   }
 }
