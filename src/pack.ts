@@ -1,3 +1,8 @@
+// ============================================================================
+// OPENPROJECT PACK - MAIN ENTRY POINT
+// Complete integration for Coda
+// ============================================================================
+
 import * as coda from "@codahq/packs-sdk";
 
 export const pack = coda.newPack();
@@ -6,275 +11,108 @@ export const pack = coda.newPack();
 // AUTHENTICATION
 // ============================================================================
 
-// OpenProject uses API Key via Basic Auth (WebBasic)
-// Username: apikey
-// Password: <your API key from OpenProject account page>
 pack.setUserAuthentication({
   type: coda.AuthenticationType.WebBasic,
   requiresEndpointUrl: true,
 });
 
 // ============================================================================
-// SCHEMAS
+// IMPORTS
 // ============================================================================
 
-const ProjectSchema = coda.makeObjectSchema({
-  properties: {
-    id: { type: coda.ValueType.Number },
-    identifier: { type: coda.ValueType.String },
-    name: { type: coda.ValueType.String },
-    description: { type: coda.ValueType.String },
-    public: { type: coda.ValueType.Boolean },
-    active: { type: coda.ValueType.Boolean },
-    status: { type: coda.ValueType.String },
-    createdAt: { type: coda.ValueType.String },
-    updatedAt: { type: coda.ValueType.String },
-  },
-  idProperty: 'id',
-  displayProperty: 'name',
-});
+import type * as types from './types';
 
-const WorkPackageSchema = coda.makeObjectSchema({
-  properties: {
-    id: { type: coda.ValueType.Number },
-    subject: { type: coda.ValueType.String },
-    description: { type: coda.ValueType.String },
-    startDate: { type: coda.ValueType.String },
-    dueDate: { type: coda.ValueType.String },
-    percentageDone: { type: coda.ValueType.Number },
-    status: { type: coda.ValueType.String },
-    priority: { type: coda.ValueType.String },
-    assignee: { type: coda.ValueType.String },
-    author: { type: coda.ValueType.String },
-    projectId: { type: coda.ValueType.Number },
-    projectName: { type: coda.ValueType.String },
-    type: { type: coda.ValueType.String },
-    createdAt: { type: coda.ValueType.String },
-    updatedAt: { type: coda.ValueType.String },
-  },
-  idProperty: 'id',
-  displayProperty: 'subject',
-});
+// Sync Tables
+import { projectsSyncTable } from './sync-tables/projects';
+import { workPackagesSyncTable } from './sync-tables/work-packages';
+import { timeEntriesSyncTable } from './sync-tables/time-entries';
+import { usersSyncTable } from './sync-tables/users';
+import { statusesSyncTable } from './sync-tables/statuses';
+import { prioritiesSyncTable } from './sync-tables/priorities';
+import { typesSyncTable } from './sync-tables/types';
+import { versionsSyncTable } from './sync-tables/versions';
+import { categoriesSyncTable } from './sync-tables/categories';
+import { activitiesSyncTable } from './sync-tables/activities';
+import { newsSyncTable } from './sync-tables/news';
+import { documentsSyncTable } from './sync-tables/documents';
+import { queriesSyncTable } from './sync-tables/queries';
 
-// ============================================================================
-// SYNC TABLES
-// ============================================================================
+// Formulas
+import {
+  GetProject,
+  GetProjectByIdentifier,
+  GetWorkPackage,
+  GetUser,
+  GetCurrentUser,
+  GetTimeEntry,
+  GetStatus,
+  GetPriority,
+  GetType,
+  GetActivity,
+  GetVersion,
+  GetWorkPackagesCount,
+  GetProjectTimeEntriesSum,
+} from './formulas/all-formulas';
 
-pack.addSyncTable({
-  name: 'Projects',
-  identityName: 'Project',
-  schema: ProjectSchema,
-  formula: {
-    name: 'SyncProjects',
-    description: 'Sync projects from OpenProject',
-    parameters: [],
-    execute: async function ([], context) {
-      const response = await context.fetcher.fetch({
-        method: 'GET',
-        url: '/api/v3/projects',
-      });
+// Actions
+import {
+  createWorkPackage,
+  updateWorkPackage,
+  deleteWorkPackage,
+} from './actions/work-packages';
 
-      const items = response.body._embedded?.elements || [];
-
-      return {
-        result: items.map((item: any) => ({
-          id: item.id,
-          identifier: item.identifier,
-          name: item.name,
-          description: item.description?.raw || '',
-          public: item.public,
-          active: item.active,
-          status: item.status,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        })),
-      };
-    },
-  },
-});
-
-pack.addSyncTable({
-  name: 'WorkPackages',
-  identityName: 'WorkPackage',
-  schema: WorkPackageSchema,
-  formula: {
-    name: 'SyncWorkPackages',
-    description: 'Sync work packages from OpenProject',
-    parameters: [
-      coda.makeParameter({
-        type: coda.ParameterType.Number,
-        name: 'projectId',
-        description: 'Optional project ID to filter',
-        optional: true,
-      }),
-    ],
-    execute: async function ([projectId], context) {
-      let url: string;
-      if (projectId) {
-        url = `/api/v3/projects/${projectId}/work_packages`;
-      } else {
-        url = '/api/v3/work_packages';
-      }
-
-      const response = await context.fetcher.fetch({
-        method: 'GET',
-        url: url,
-      });
-
-      const items = response.body._embedded?.elements || [];
-
-      return {
-        result: items.map((item: any) => ({
-          id: item.id,
-          subject: item.subject,
-          description: item.description?.raw || '',
-          startDate: item.startDate,
-          dueDate: item.dueDate,
-          percentageDone: item.percentageDone,
-          status: item._embedded?.status?.name || '',
-          priority: item._embedded?.priority?.name || '',
-          assignee: item._embedded?.assignee?.name || '',
-          author: item._embedded?.author?.name || '',
-          projectId: item._embedded?.project?.id,
-          projectName: item._embedded?.project?.name || '',
-          type: item._embedded?.type?.name || '',
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        })),
-      };
-    },
-  },
-});
+import {
+  createTimeEntry,
+  updateTimeEntry,
+  deleteTimeEntry,
+} from './actions/time-entries';
 
 // ============================================================================
-// FORMULAS
+// REGISTER SYNC TABLES
 // ============================================================================
 
-pack.addFormula({
-  name: 'GetProject',
-  description: 'Get a project by ID',
-  parameters: [
-    coda.makeParameter({
-      type: coda.ParameterType.Number,
-      name: 'id',
-      description: 'Project ID',
-    }),
-  ],
-  resultType: coda.ValueType.Object,
-  schema: ProjectSchema,
-  execute: async function ([id], context) {
-    const response = await context.fetcher.fetch({
-      method: 'GET',
-      url: `/api/v3/projects/${id}`,
-    });
-
-    const item = response.body;
-    return {
-      id: item.id,
-      identifier: item.identifier,
-      name: item.name,
-      description: item.description?.raw || '',
-      public: item.public,
-      active: item.active,
-      status: item.status,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
-  },
-});
-
-pack.addFormula({
-  name: 'GetWorkPackage',
-  description: 'Get a work package by ID',
-  parameters: [
-    coda.makeParameter({
-      type: coda.ParameterType.Number,
-      name: 'id',
-      description: 'Work Package ID',
-    }),
-  ],
-  resultType: coda.ValueType.Object,
-  schema: WorkPackageSchema,
-  execute: async function ([id], context) {
-    const response = await context.fetcher.fetch({
-      method: 'GET',
-      url: `/api/v3/work_packages/${id}`,
-    });
-
-    const item = response.body;
-    return {
-      id: item.id,
-      subject: item.subject,
-      description: item.description?.raw || '',
-      startDate: item.startDate,
-      dueDate: item.dueDate,
-      percentageDone: item.percentageDone,
-      status: item._embedded?.status?.name || '',
-      priority: item._embedded?.priority?.name || '',
-      assignee: item._embedded?.assignee?.name || '',
-      author: item._embedded?.author?.name || '',
-      projectId: item._embedded?.project?.id,
-      projectName: item._embedded?.project?.name || '',
-      type: item._embedded?.type?.name || '',
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
-  },
-});
+pack.addSyncTable(projectsSyncTable);
+pack.addSyncTable(workPackagesSyncTable);
+pack.addSyncTable(timeEntriesSyncTable);
+pack.addSyncTable(usersSyncTable);
+pack.addSyncTable(statusesSyncTable);
+pack.addSyncTable(prioritiesSyncTable);
+pack.addSyncTable(typesSyncTable);
+pack.addSyncTable(versionsSyncTable);
+pack.addSyncTable(categoriesSyncTable);
+pack.addSyncTable(activitiesSyncTable);
+pack.addSyncTable(newsSyncTable);
+pack.addSyncTable(documentsSyncTable);
+pack.addSyncTable(queriesSyncTable);
 
 // ============================================================================
-// ACTIONS (using makeFormula with isAction: true)
+// REGISTER FORMULAS
 // ============================================================================
 
-pack.addFormula({
-  name: 'CreateWorkPackage',
-  description: 'Create a new work package',
-  isAction: true,
-  parameters: [
-    coda.makeParameter({
-      type: coda.ParameterType.Number,
-      name: 'projectId',
-      description: 'Project ID',
-    }),
-    coda.makeParameter({
-      type: coda.ParameterType.String,
-      name: 'subject',
-      description: 'Work package subject',
-    }),
-    coda.makeParameter({
-      type: coda.ParameterType.String,
-      name: 'description',
-      description: 'Description',
-      optional: true,
-    }),
-  ],
-  resultType: coda.ValueType.Object,
-  schema: WorkPackageSchema,
-  execute: async function ([projectId, subject, description], context) {
-    const body: any = {
-      subject: subject,
-      _links: {
-        project: {
-          href: `/api/v3/projects/${projectId}`,
-        },
-      },
-    };
+pack.addFormula(GetProject);
+pack.addFormula(GetProjectByIdentifier);
+pack.addFormula(GetWorkPackage);
+pack.addFormula(GetUser);
+pack.addFormula(GetCurrentUser);
+pack.addFormula(GetTimeEntry);
+pack.addFormula(GetStatus);
+pack.addFormula(GetPriority);
+pack.addFormula(GetType);
+pack.addFormula(GetActivity);
+pack.addFormula(GetVersion);
+pack.addFormula(GetWorkPackagesCount);
+pack.addFormula(GetProjectTimeEntriesSum);
 
-    if (description) {
-      body.description = {
-        raw: description,
-      };
-    }
+// ============================================================================
+// REGISTER ACTIONS
+// ============================================================================
 
-    const response = await context.fetcher.fetch({
-      method: 'POST',
-      url: '/api/v3/work_packages',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+pack.addFormula(createWorkPackage);
+pack.addFormula(updateWorkPackage);
+pack.addFormula(deleteWorkPackage);
+pack.addFormula(createTimeEntry);
+pack.addFormula(updateTimeEntry);
+pack.addFormula(deleteTimeEntry);
 
-    return response.body;
-  },
-});
+// Export types for external use
+export * from './types';
